@@ -12,6 +12,9 @@ brew list php$newversion 2> /dev/null > /dev/null
 
 if [ $? -eq 0 ]; then
 	echo "PHP version $newversion found"
+	
+	echo "Stopping PHP-FPM $currentversion"
+	launchctl unload -w ~/Library/LaunchAgents/homebrew.mxcl.php$currentversion.plist
 
 	echo "Unlinking old binaries..."
 	brew unlink php$currentversion 2> /dev/null > /dev/null
@@ -19,22 +22,22 @@ if [ $? -eq 0 ]; then
 	echo "Linking new binaries..."
 	brew link php$newversion
 
-	echo "Linking new modphp addon..."
-	sudo ln -sf `brew list php$newversion | grep libphp` /usr/local/lib/libphp5.so
+	echo "Starting PHP-FPM $currentversion"
+	launchctl load -w ~/Library/LaunchAgents/homebrew.mxcl.php$newversion.plist
 
-	echo "Updating version file..."
+	echo "Restarting apache"
 
-	pgrep -f /usr/sbin/httpd 2> /dev/null > /dev/null
+	pgrep -f /usr/local/opt/httpd24/bin/httpd 2> /dev/null > /dev/null
 	if [ $? -eq 0 ]; then
 		echo "Restarting system Apache..."
-		sudo pkill -9 -f /usr/sbin/httpd
-		sudo /usr/sbin/apachectl -k restart > /dev/null 2>&1
+		pkill -9 -f /usr/local/opt/httpd24/bin/httpd
+		/usr/local/bin/apachectl -k restart > /dev/null 2>&1
 	fi
 	pgrep -f /usr/local/Cellar/*/httpd 2> /dev/null > /dev/null
 	if [ $? -eq 0 ]; then
 		echo "Restarting homebrew Apache..."
-		sudo pkill -9 -f /usr/local/Cellar/*/httpd
-		sudo /usr/local/bin/apachectl -k restart > /dev/null 2>&1
+		pkill -9 -f /usr/local/Cellar/*/httpd
+		/usr/local/bin/apachectl -k restart > /dev/null 2>&1
 	fi
 
 	echo "Done."
